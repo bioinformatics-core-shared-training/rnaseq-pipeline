@@ -34,3 +34,11 @@ Broad Institute and a commercial package MetaCore for Pathway analysis which we 
 - GSEA for Gene Set Enrichment Analysis http://software.broadinstitute.org/gsea/index.jsp
 - MetaCore for pathway analysis http://thomsonreuters.com/en/products-services/pharma-life-sciences/pharmaceutical-research/metacore.html
 - gProfiler http://biit.cs.ut.ee/gprofiler/
+
+## Tools in Galaxy
+
+http://galaxy.cruk.cam.ac.uk/
+
+Tools under **'NGS: RNA-seq'** category:
+- goseq tests for overrepresented gene categories
+- GO enrichment of eQTL hotspot gene lists
