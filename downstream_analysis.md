@@ -14,7 +14,7 @@ associate with it:
 - go_enrichment: GO enrichment of eQTL hotspot gene lists
 https://toolshed.g2.bx.psu.edu/repository?repository_id=c56a361234052bf9&changeset_revision=007baf9662c6
 
-> Installation of go_enrichment	in Galaxy based on TopGO R package
+> Installation of go_enrichment	in Galaxy based on TopGO R package - uninstalled it - better use GoSeq one
 
 - blast2GO: Maps BLAST results to GO annotation terms
 https://toolshed.g2.bx.psu.edu/repository/view_repository?id=e4de88c47079d971
@@ -41,4 +41,3 @@ http://galaxy.cruk.cam.ac.uk/
 
 Tools under **'NGS: RNA-seq'** category:
 - goseq tests for overrepresented gene categories
-- GO enrichment of eQTL hotspot gene lists
