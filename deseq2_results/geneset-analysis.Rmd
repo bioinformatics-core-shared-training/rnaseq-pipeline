@@ -1,0 +1,59 @@
+---
+title: "Gene Set Enrichment and Pathways Analysis"
+author: "Mark Dunning"
+date: "6 March 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Gene-set Enrichment analysis with `goseq`
+
+The `goseq` package can be used to find over- and under-represented gene sets. The analysis requires a vector of all genes that were analysed with a logical `TRUE`/`FALSE` value to indicate whether that gene was differentially-expressed in the contrast of interest.
+
+```{r}
+deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+deTable
+```
+
+```{r}
+## If we have been using annotation packages, select might be overwritten to be select from the AnnotationDBI package rather than dplyr. Using dplyr:::select we explicitly make sure the correct function is used.
+
+library(dplyr)
+deTable %>% mutate(padj = ifelse(is.na(padj), 1, padj)) %>% 
+  mutate(DE = ifelse(padj < 0.05, TRUE, FALSE)) %>% 
+  dplyr:::select(X, DE) %>% 
+  write.table("t47d_Treatment_DEA_Prog-vs-Control_all_for_Galaxy.tsv",sep="\t",row.names=FALSE)
+```
+
+Now make a ranked-list table for input into GSEA
+
+```{r}
+
+deTable %>% arrange(desc(stat)) %>% 
+  dplyr:::select(symbol, stat) %>% 
+  filter(!is.na(symbol)) %>% 
+  write.table("t47d_Treatment_DEA_Prog-vs-Control_all_for_GSEA.rnk",row.names=FALSE,sep="\t",quote=FALSE)
+
+```
+
+
+We will select genes with adjusted p-value `<0.05`. 
+```{r}
+genes <- rep(FALSE,nrow(deTable))
+genes[which(deTable$padj < 0.05)] <- TRUE
+table(genes)
+names(genes) <- deTable$X 
+```
+
+
+
+```{r}
+library(goseq)
+pwf <- nullp(genes, "hg19", id = "ensGene")
+goRes <- goseq(pwf, "hg19","ensGene")
+goRes
+```
+
