@@ -9,24 +9,26 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Gene-set Enrichment analysis with `goseq`
-
-The `goseq` package can be used to find over- and under-represented gene sets. The analysis requires a vector of all genes that were analysed with a logical `TRUE`/`FALSE` value to indicate whether that gene was differentially-expressed in the contrast of interest.
+## Loading the data
 
 ```{r}
-deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 deTable
 ```
 
-```{r}
-## If we have been using annotation packages, select might be overwritten to be select from the AnnotationDBI package rather than dplyr. Using dplyr:::select we explicitly make sure the correct function is used.
+## Initial Galaxy Workflow
 
-library(dplyr)
-deTable %>% mutate(padj = ifelse(is.na(padj), 1, padj)) %>% 
-  mutate(DE = ifelse(padj < 0.05, TRUE, FALSE)) %>% 
-  dplyr:::select(X, DE) %>% 
-  write.table("t47d_Treatment_DEA_Prog-vs-Control_all_for_Galaxy.tsv",sep="\t",row.names=FALSE)
-```
+- Load csv file
+- Convert to tabular
+- Remove header line by selecting last lines of file
+- Cut to columns 1 to 7 and 12 (Gene Symbol)
+
+### Produce GSEA input file in Galaxy
+
+- Sort by column 5
+- Cut columns 1 and 8
+
+The corresponding code in R:-
 
 Now make a ranked-list table for input into GSEA
 
@@ -40,6 +42,33 @@ deTable %>% arrange(desc(stat)) %>%
 ```
 
 
+
+## Gene-set Enrichment analysis with `goseq`
+
+The `goseq` package can be used to find over- and under-represented gene sets. The analysis requires a vector of all genes that were analysed with a logical `TRUE`/`FALSE` value to indicate whether that gene was differentially-expressed in the contrast of interest.
+
+## Preparing a file for Galaxy
+
+```{r}
+## If we have been using annotation packages, select might be overwritten to be select from the AnnotationDBI package rather than dplyr. Using dplyr:::select we explicitly make sure the correct function is used.
+
+library(dplyr)
+deTable %>% mutate(padj = ifelse(is.na(padj), 1, padj)) %>% 
+  mutate(DE = ifelse(padj < 0.05, TRUE, FALSE)) %>% 
+  dplyr:::select(X, DE) %>% 
+  write.table("t47d_Treatment_DEA_Prog-vs-Control_all_for_Galaxy.tsv",sep="\t",row.names=FALSE)
+```
+
+
+### Workflow in Galaxy
+Galaxy Workflow to annotate whether each gene is DE
+
+- Compute expression `c7 <0.05`
+- Cut columns 1 and 9
+
+
+### Preparing data for goseq
+
 We will select genes with adjusted p-value `<0.05`. 
 ```{r}
 genes <- rep(FALSE,nrow(deTable))
@@ -47,7 +76,6 @@ genes[which(deTable$padj < 0.05)] <- TRUE
 table(genes)
 names(genes) <- deTable$X 
 ```
-
 
 
 ```{r}
