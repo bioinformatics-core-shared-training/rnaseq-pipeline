@@ -30,7 +30,7 @@ deTable
 
 The corresponding code in R:-
 
-Now make a ranked-list table for input into GSEA
+In R, here's how we would  make a ranked-list table for input into GSEAPreRanked
 
 ```{r}
 

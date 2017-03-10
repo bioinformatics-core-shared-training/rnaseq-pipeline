@@ -2,22 +2,19 @@
 title: "Ontologies and Enrichment"
 author: "Mark Dunning; mark 'dot' dunning 'at' cruk.cam.ac.uk"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
-output: 
-  html_notebook: 
+output:
+  html_notebook:
     toc: yes
     toc_float: yes
+  html_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE,echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r echo=FALSE,message=FALSE}
-library(GEOquery)
-library(limma)
-```
-
-# Gene-Ontologies and Annotation
+# Gene-Ontologies and Pathways
 
 ## Gene-Ontology Analysis
 
@@ -27,12 +24,6 @@ In this section we move towards discovering if our results are ***biologically s
 
 There are two different approaches one might use, and we will cover the theory behind both
 
-- There is also a bunch of websites for doing the tests
-    + we will show how they are done in Bioconductor so the theory is clear
-- We will assume we have done a differential-expression analysis, but the same techniques can be used for other situations when we have a gene list
-    + ChIP-seq
-    + RNA-seq
-    
 
 ## Theory Part I: Over-representation analysis
 
@@ -61,7 +52,7 @@ Now, lets select a number (say, 12) of the balls at random without seeing into t
 ![](images/picked-balls.png)
 
 
-We have picked, at random, 8 grey balls. <!--Using simulations, we can repeat the process and look at how many grey we get. We can (of course!) do this in R. In base R there is a family of functions that can generate random draws from various distributions; `rnorm`, `rbinom`, `rhyper` etc....-->
+We have picked, at random, 8 grey balls. Using simulations, we can repeat the process and look at how many grey we get. <!--We can (of course!) do this in R. In base R there is a family of functions that can generate random draws from various distributions; `rnorm`, `rbinom`, `rhyper` etc....-->
 
 The distribution of the data shows what the most-likely values are
 
@@ -84,16 +75,7 @@ table(trials)/10000
 
 ```
 
-The probability of getting *at least* a certain number can also be computed
-
-```{r}
-cumsum(table(trials)/10000)
-1-cumsum(table(trials)/10000)
-```
-
-
-
-Back to our example, the distribution of balls can be expressed as a contingency table, on which we can use a Fisher's exact test
+Back to our example, the distribution of balls can be expressed as a 2 x 2 table, on which we can use a Fisher's exact test (or equivalent)
 
 Total grey balls: 10
 Total in subset: 12
@@ -121,35 +103,7 @@ or less formally;
 *P = (ways of choosing grey balls) X (ways of non-grey balls amongst subset) / ways of choosing subset*
 
 
-<!--**Be careful of how you define the universe**
 
-What genes were candidates for selection as universe?
-
-- All possible genes
-- All genes represented on the chip
-- All genes that have a GO annotation
-- All genes from the chip that pass a **non-specific** filter
-
-Just changing the size of the universe alone can have a massive effect on the p-value
-
-- In the formula, we have to divide by the universe size
-    + so the probability will become very small as this increases
-    + even if all the other numbers stay the same
-
-```{r}
-## Code from Seth Falcon
-P <- function(size){
-  nFound <- 10
-  nDrawn <- 400
-  nAtCat <- 40
-  nNotAtCat <- size - nAtCat
-  phyper(nFound-1, nAtCat,nNotAtCat,nDrawn,lower.tail = FALSE)
-}
-P(1000)
-P(5000)
-```
-
--->
 
 ## Software for conducting a over-representation test
 
@@ -159,9 +113,9 @@ This package has been *specifically-developed* for use with RNA-seq data. Plenty
 
 ## Preparing the data for an over-representation test
 
-We can start with the list that contains results for *all* genes
+We can start with the list that contains results for *all* genes; Let's take `t47d_Treatment_DEA_Prog-vs-Control_all.csv`
 
-```{r cache=TRUE}
+```{r}
 deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 deTable
 ```
@@ -174,27 +128,79 @@ There are several ways of doing this. If you wish to see the R code (using `dply
 library(dplyr)
 deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 mutate(deTable, DE = padj < 0.05) %>% 
-  select(X, DE) %>% 
-  write.table("de-table-for-goseq.txt",quote=FALSE,row.names=FALSE)
+  mutate(DE = ifelse(is.na(DE),FALSE,DE)) %>% 
+  select(X, DE) -> filteredTable
+filteredTable
+  write.table(filteredTable,"de-table-for-goseq.txt",quote=FALSE,row.names=FALSE)
 
 ```
 
 Manipulating the file can also be done in Galaxy.
 
-## Using online tools
+## Importing the Gene list into Galaxy
 
-Even though this is a course advocating the use of R and Bioconductor, there are in fact many online tools that can assist with gene set analyses. [DAVID](https://david.ncifcrf.gov/) is a very popular tool and is able to accept gene lists in the form of Entrez IDs.
+### Import the csv file
 
-We write the selected Entrez IDs to a text file. So that the file is recognised by DAVID, we need to specify the argument `row.names=FALSE` to make sure that row numbers do not appear in the file.
+***Get Data*** -> ***Upload Data***
+
+![](images/galaxy-1.png)
+
+### Convert to tabular form
+
+***Text Manipulation*** -> ***Convert delimiters to TAB***
+
+Select *Commas* from drop-down menu
+
+![](images/galaxy-2.png)
+
+### Remove header line
+
+***Text Manipulation*** -> ***Select last lines from a dataset***
+
+Make note of how many lines in file, *N* and remove *N-1* last lines with this tool
+![](images/galaxy-3.png)
+
+### Retain columns of interest
+
+Put *c1,c2,c3,c4,c5,c6,c7,c12* to retain columns 1,2,3,4,5,6,7 and 12
+
+***Text Manipulation*** -> ***Cut columns from a table***
+
+![](images/galaxy-4.png)
+
+### The cleaned dataset
+
+The output from the previous step will be referred to as our *cleaned dataset*
+
+![](images/galaxy-5.png)
 
 
-```{r}
-write.table(selectedEntrezIds, file="myEntrezGene.txt",sep="\t",quote=FALSE,row.names = FALSE)
-```
+## Performing a Gene Set Analysis in Galaxy
 
-You can upload this text file to the DAVID website, along with the gene universe we created previously, and follow the instructions.
+From our cleaned table in the previous steps, we need to compute if each gene is DE at 0.05 significance level
 
+### Adding an extra column
 
+***Text Manipulation*** -> ***Compute an expression on every row***
+
+Use the expression `c7<0.05` to test if the adjusted p-value is less than 0.05
+
+![](images/galaxy-6.png)
+
+Which should give something like this
+
+![](images/galaxy-7.png)
+
+### Extracting the columns needed for goseq
+
+***Text Manipulation*** -> ***Cut columns from a table***
+Choose `c8,c9` as the columns to cut
+
+![](images/galaxy-8.png)
+
+Which should give the following
+
+![](images/galaxy-9.png)
 
 
 ## Theory Part II: Threshold-free
@@ -207,86 +213,43 @@ For these tests, we don't have to specify a statistical threshold and use the te
 
 The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. However, it requires you to convert your data into a particular format. A more convenient option is [***GeneTrail***](http://genetrail.bioinf.uni-sb.de/enrichment_analysis.php?js=1&cc=1) which has the option to do a GSEA-style analysis.
 
-The required input text contains a set of gene identifiers that are ordered according to some test statistic. To produce such a file, we first have to order the t-statistics from our test `ttests$statistic` with the `order` function.
+The required input text contains a set of gene identifiers that are ordered according to some test statistic.
 
 ```{r}
-gseaList <- anno.final$Entrez_Gene_ID[order(ttests$statistic,decreasing = TRUE)]
-write.table(gseaList, file="genetrail-gsea.txt",sep="\t",row.names = FALSE,quote=FALSE)
-```
-
-Note that Genetrail can also be used for the Over-Representation analysis that we saw in the previous section.
-
-## A Threshold-free test in Bioconductor
-
-A simple version of this test is implemented in the `geneSetTest` function in `limma`,
-which computes a p-value to test the hypothesis that the selected genes have more extreme
-test-statistics than one might expect by chance. Moreover, separate tests can be performed
-to see if the selected genes are up-regulated (`alternative=up`) or down-regulated (`alternative=down`). The default is to test for extreme statistics regardless of sign.
-
-To demonstrate, we will pick 50 genes at random. We have to supply the entire set of test statistics along indices of interest. The result of the `barcode` plot below shows there is no particular trend for genes we have picked be up- or down-regulated.
-
-- Here `sample` picks a random set of `n` values from a given vector
-- As we expect, the random rows are neither skewed towards to top or bottom of the ranked list
-
-```{r}
-library (limma)
-
-randGenes <- sample(1:nrow(ttests),50)
-randGenes
-
-geneSetTest (index = randGenes , statistics = ttests$statistic)
-
-geneSetTest (index = randGenes , statistics = ttests$statistic ,
-  alternative = "down" )
-
-geneSetTest (index = randGenes , statistics = ttests$statistic ,
-  alternative = "up" )
-
-
-```
-
-A useful way of visualising the results is with a `barcodeplot`. The statistics are ranked left to right from largest to smallest. The ranked statistics are represented by a shaded bar or bed, and the positions of the specified subsets are marked by vertical bars, forming a pattern like a barcode. Inspired by GSEA, the line graph above the plot (an *enrichment worm*) gives a sense of whereabouts the enrichment is highest. 
-```{r}
-barcodeplot (statistics = as.numeric(ttests$statistic) , index = randGenes )
+library(dplyr)
+deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+deTable %>% arrange(desc(stat)) %>% 
+  dplyr:::select(symbol, stat) %>% 
+  filter(!is.na(symbol)) -> orderedTable
+orderedTable
 ```
 
 
-On the other hand, we could deliberately pick genes with a significant p-value and notice how the results are altered.
+
+## Preparing the gene set for a GSEA analysis
+
+### Ranking the genes
+
+From the *cleaned* table created above, sort on column 5 (the test statistic)
+
+***Filter and Sort*** -> ***Sort data in ascending or descending order***
+
+![](images/galaxy-10.png)
+
+Giving the output:-
+
+![](images/galaxy-11.png)
+
+### Cutting the columns
+
+Extract columns 8 (gene symbol) followed by test statistic; `c8,c5`
+
+***Text Manipulation*** -> ***Cut columns from a table***
+
+![](images/galaxy-12.png)
+
+### Remove rows without a gene symbol
 
 
-```{r}
 
-myGenes <- which(ttests$p.value < 0.01)[1:50]
-
-geneSetTest (index = myGenes , statistics = ttests$statistic)
-
-geneSetTest (index = myGenes , statistics = ttests$statistic ,
-  alternative = "down" )
-
-geneSetTest (index = myGenes , statistics = ttests$statistic ,
-  alternative = "up" )
-
-barcodeplot (statistics = as.numeric(ttests$statistic) , index = myGenes )
-
-```
-
-If we have a specific query about a set of genes, we need to locate them in the list of ranked statistics. 
-
-- We have already seen of example of searching for particular gene symbols in our output tables.
-- We were careful to make sure the annotation was in the same order as the expression matrix, so this should be straightforward
-
-```{r}
-mylist <- c("LOC441066","ARF3","FMNL3","CSF1R","XLKD1","TTRAP","DMWD","SYNPO2L","PILRB","LAMP3")
-myGenes <- which(anno.final$Symbol %in% mylist)
-geneSetTest (index = myGenes , statistics = ttests$statistic)
-
-geneSetTest (index = myGenes , statistics = ttests$statistic ,
-  alternative = "down" )
-
-geneSetTest (index = myGenes , statistics = ttests$statistic ,
-  alternative = "up" )
-
-barcodeplot (statistics = as.numeric(ttests$statistic) , index = myGenes)
-```
-
-However, if we want to interrogate the results for a particular GO or KEGG pathway we could look up the identifiers manually, or use some useful functionality in Bioconductor.
+## Using the GSEAPreranked
