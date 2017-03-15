@@ -1,5 +1,5 @@
 ---
-title: "Ontologies and Enrichment"
+title: "Beyond the Gene List"
 author: "Mark Dunning; mark 'dot' dunning 'at' cruk.cam.ac.uk"
 date: '`r format(Sys.time(), "Last modified: %d %b %Y")`'
 output:
@@ -12,6 +12,67 @@ output:
 
 ```{r setup, include=FALSE,echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+```
+
+# How to manipulate a gene list
+
+The golden rule before we start ***Always keep a backup of the output from the pipeline, never work on the original data***!
+
+There are various tasks you might wish to perform on a gene list
+
+- Search for our favourite gene
+- Sort / Rank according to statistic or p-value
+- Filter to obtain genes with particular cut-off and fold-change
+- Re-order / re-arrange columns
+
+Our recommended tools to perform such operations would be a programming language such as R / Python so that the operations can be scripted and automated. As a compromise, our Galaxy server provides various operations through an intuitive interface and allows the user to build a workflow to a chain of simple operations.
+
+Different online tools or GUIs will take different types of input, but will probably involve some combination of the operations mentioned above. Therefore, we will introduce some tools in Galaxy that should allow you to manipulate your data into the required form. Later, we will give examples of workflows for particular gene set enrichment / pathways analysis tools.
+
+In the first generic example, we will show how to filter a gene list using Galaxy:-
+
+## How to apply an alternative filter to the gene list in Galaxy
+
+### Upload the gene list in csv form
+
+The gene list `.csv` file can be uploaded into Galaxy. In this example we want to choose the file with no p-value cut-offs applied
+
+![](images/filter1.png)
+
+### Convert to tabular
+
+Before we can go further, Galaxy needs to convert the data you just uploaded into *tabular* form by replacing commas with a tab. This can be done using the ***Text Manipulation*** -> ***Convert delimiters to TAB*** option. Make sure that *Commas* is selected from the drop-down.
+
+![](images/filter2.png)
+
+### Filter
+
+We can apply filtering using the menu option ***Filter and Sort*** -> ***Filter data on any column using simple expressions***. Here we use the condition `c7 <0.01 and c3 > 1.5` to require that Column 7 (adjusted p-value) is less than 0.05 *and* Column 3 (log fold-change) is greater than 1.5.
+
+
+![](images/filter3.png)
+
+You could also use this menu to filter to genes on a particular chromosome or within a certain range of start and end positions
+
+## (Optional) select columns
+
+![](images/filter4.png)
+
+## (Optional) sorting by a column
+
+We can also sort the table by values in a particular column. e.g. the log$_2$ fold change.
+![](images/filter5.png)
+
+## R workflow
+
+For those keen on R, equivalent operations can be performed with the `dplyr` package. See our [intermediate R](http://bioinformatics-core-shared-training.github.io/r-intermediate/) course for details. 
+
+```{r message=FALSE}
+library(dplyr)
+deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+filteredTable <- filter(deTable, padj < 0.05, log2FoldChange > 1.5)
+sortedTable <- arrange(filteredTable, log2FoldChange)
+reducedTable <- select(filteredTable, X,baseMean,log2FoldChange)
 ```
 
 # Gene-Ontologies and Pathways
@@ -34,7 +95,7 @@ The question we are asking here is;
 
 > ***"Are the number of DE genes associated with Theme X significantly greater than what we might expect by chance alone?"***
 
-Where Theme X could be genes belonging to a particular GO (Gene Onotology) term.
+Where Theme X could be genes belonging to a particular GO (Gene Onotology) term or pathway.
 
 Let's imagine that we have a bag full of balls. Each balls represents a gene in the *gene universe*. 
 - Paint the balls representing our selected list grey, and paint the rest red.
@@ -42,7 +103,7 @@ Let's imagine that we have a bag full of balls. Each balls represents a gene in 
 
 ![](images/bag-and-balls.png)
 
-In this small example, we can define;
+In this small example, we can know in advance the total number of balls and total number in our category of interest
 
 - Total number of balls: 40
 - Total number of interesting (grey) balls: 10
@@ -52,71 +113,50 @@ Now, lets select a number (say, 12) of the balls at random without seeing into t
 ![](images/picked-balls.png)
 
 
-We have picked, at random, 8 grey balls. Using simulations, we can repeat the process and look at how many grey we get. <!--We can (of course!) do this in R. In base R there is a family of functions that can generate random draws from various distributions; `rnorm`, `rbinom`, `rhyper` etc....-->
 
-The distribution of the data shows what the most-likely values are
+We can express a particular choice of balls as a table:-
 
-```{r}
-#see ?rhyper for argument definition
-trials <- rhyper(10000,40,10,12)
-hist(trials)
-```
-
-We can count how many times each value is observed
-
-```{r}
-table(trials)
-```
-
-Dividing by the number of trials gives a probability of sorts
-
-```{r}
-table(trials)/10000
-
-```
-
-Back to our example, the distribution of balls can be expressed as a 2 x 2 table, on which we can use a Fisher's exact test (or equivalent)
-
-Total grey balls: 10
-Total in subset: 12
-
-```{r}
-df <- data.frame(Selection_in = c(8,4), Selection_out = c(2,26))
-rownames(df) <- c("Grey_in", "Grey_out")
-df
-```
+|  | In Selection | Not In Selection | Total
+------------- | ------------- |  ------------- | ------------- | 
+Grey Selected | 8 | 2 | 10 |
+Grey Not Selected  | 4 | 26 | 30 |
+Total | 12 | 6 | 40 |
 
 
-
-```{r}
-df <- data.frame(Selection_in = c("a","c","a+c"), Selection_out = c("b","d","b+d"), RowTotal = c("a +b","c+d","a+b+c+d (=n)"))
-rownames(df) <- c("Grey_in", "Grey_out","Column Total")
-df
-```
 
 The formula for Fishers exact test is;
 
 $$ p = \frac{\binom{a + b}{a}\binom{c +d}{c}}{\binom{n}{a +c}} = \frac{(a+b)!(c+d)!(a+c)!(b+d)!}{a!b!c!d!n!} $$
+with :-
+
+|  | In Selection | Not In Selection | Total
+------------- | ------------- |  ------------- | ------------- | 
+Grey Selected | a | b | a  +  b |
+Grey Not Selected  | c | d | c + d |
+Total | a + c | b +d | a + b + c + d (=n) |
+
+
+
 
 or less formally;
 
 *P = (ways of choosing grey balls) X (ways of non-grey balls amongst subset) / ways of choosing subset*
 
 
-
+Fortunately, we have software to calculate these quantities!
 
 ## Software for conducting a over-representation test
 
 We will be using [`goseq`](https://www.bioconductor.org/packages/release/bioc/html/goseq.html), which is a software package available through [Bioconductor](www.bioconductor.org/). However, rather having to write R code, we will be using the package through our institute's Galaxy server.
 
-This package has been *specifically-developed* for use with RNA-seq data. Plenty of methods have been applied to microarray data, but the assumptions might not hold for RNA-seq. For instance, `goseq` will correct for gene length
+This package has been *specifically-developed* for use with RNA-seq data. Plenty of methods have been applied to microarray data, but the assumptions might not hold for RNA-seq. For instance, `goseq` will adjust for the length of a gene.
 
 ## Preparing the data for an over-representation test
 
 We can start with the list that contains results for *all* genes; Let's take `t47d_Treatment_DEA_Prog-vs-Control_all.csv`
 
 ```{r}
-deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 deTable
 ```
 
@@ -124,9 +164,9 @@ The goal is to obtain a table with two columns; the first containing the gene id
 
 There are several ways of doing this. If you wish to see the R code (using `dplyr`), click the 'Code' button on the right.
 
-```{r}
+```{r message=FALSE}
 library(dplyr)
-deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 mutate(deTable, DE = padj < 0.05) %>% 
   mutate(DE = ifelse(is.na(DE),FALSE,DE)) %>% 
   select(X, DE) -> filteredTable
@@ -207,12 +247,17 @@ Which should give the following
 
 For these tests, we don't have to specify a statistical threshold and use the test statistics from *all* genes as the input to the test. The popular *Gene Set Enrichment Analysis (GSEA)* uses this approach. These tests can be used to detect differential expression for a group of genes, even when the effects are too small or there is too little data to detect the genes individually.
 
-![gsea](images/GSEA.png)
+![*Subramanian et al, PNAS 2005*](images/GSEA.png)
 
-*Subramanian et al, PNAS 2005*
+- Rank all your genes according to test statistic or fold-change
+- For a particular gene set of interest, look down the gene list and compute a score
+    + Go up one unit on the y-axis if the gene you encounter is contained in your gene list
+    + Go down one unit if the gene is not contained in the gene list
+    + Plot the score against position in gene list
+    + If there is a peak at the left or right, then your set is enriched.
 
-The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. However, it requires you to convert your data into a particular format. A more convenient option is [***GeneTrail***](http://genetrail.bioinf.uni-sb.de/enrichment_analysis.php?js=1&cc=1) which has the option to do a GSEA-style analysis.
 
+The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. 
 The required input text contains a set of gene identifiers that are ordered according to some test statistic.
 
 ```{r}
