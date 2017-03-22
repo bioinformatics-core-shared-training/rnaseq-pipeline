@@ -145,7 +145,7 @@ or less formally;
 
 Fortunately, we have software to calculate these quantities!
 
-## Software for conducting a over-representation test
+## Software for conducting a over-representation test (goseq)
 
 We will be using [`goseq`](https://www.bioconductor.org/packages/release/bioc/html/goseq.html), which is a software package available through [Bioconductor](www.bioconductor.org/). However, rather having to write R code, we will be using the package through our institute's Galaxy server.
 
@@ -170,9 +170,8 @@ deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 mutate(deTable, DE = padj < 0.05) %>% 
   mutate(DE = ifelse(is.na(DE),FALSE,DE)) %>% 
   select(X, DE) -> filteredTable
-filteredTable
   write.table(filteredTable,"de-table-for-goseq.txt",quote=FALSE,row.names=FALSE)
-
+filteredTable
 ```
 
 Manipulating the file can also be done in Galaxy.
@@ -234,13 +233,21 @@ Which should give something like this
 ### Extracting the columns needed for goseq
 
 ***Text Manipulation*** -> ***Cut columns from a table***
-Choose `c8,c9` as the columns to cut
+Choose `c1,c9` as the columns to cut
 
 ![](images/galaxy-8.png)
 
 Which should give the following
 
 ![](images/galaxy-9.png)
+
+### Running goseq
+
+***NGS:RNA-seq** -> goseq
+
+Select Genome version *hg19* in this case. Could also specify which type of identifiers can be found in the first column. *Ensembl* ID is correct in this case.
+
+![](images/galaxy-10.png)
 
 
 ## Theory Part II: Threshold-free
