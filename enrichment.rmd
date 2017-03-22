@@ -251,6 +251,12 @@ Select Genome version *hg19* in this case. Could also specify which type of iden
 
 ![](images/galaxy-10.png)
 
+### Exercise:
+
+The differentially-expressed genes that we identified could either by up- or down-regulated. Sometimes we might want to look for over-represented genes in the up- or down-regulated genes only
+
+- Let's suppose we want to analyse the up-regulated genes only
+- Consider what changes you would need to make to the workflow and perform the analysis
 
 ## Theory Part II: Threshold-free
 
