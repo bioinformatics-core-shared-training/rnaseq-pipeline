@@ -52,17 +52,19 @@ We can apply filtering using the menu option ***Filter and Sort*** -> ***Filter 
 
 ![](images/filter3.png)
 
-You could also use this menu to filter to genes on a particular chromosome or within a certain range of start and end positions
+You could also use this menu to filter on genes on a particular chromosome or within a certain range of start and end positions
 
-## (Optional) select columns
+## Selecting columns
 
 ![](images/filter4.png)
 
-## (Optional) sorting by a column
+## Sorting by a column
 
 We can also sort the table by values in a particular column. e.g. the log$_2$ fold change.
 ![](images/filter5.png)
 
+- can also sort by multiple columns
+    + e.g. Chromosome 
 ## R workflow
 
 For those keen on R, equivalent operations can be performed with the `dplyr` package. See our [intermediate R](http://bioinformatics-core-shared-training.github.io/r-intermediate/) course for details. 
@@ -300,8 +302,16 @@ Extract columns 8 (gene symbol) followed by test statistic; `c8,c5`
 
 ![](images/galaxy-12.png)
 
-### Remove rows without a gene symbol
+
+## Running the GSEAPreranked tool
+
+In our Galaxy server we provide an interface to`fgsea`, which is a Bioconductor package for performing the GSEA algorithm on a pre-ranked gene list.
+
+We can give it the table we have generated in the previous step
 
 
+Gives all results ranked according to..
 
-## Using the GSEAPreranked
+- Can we identify gene sets that are significant at 0.05?
+- What genes are over- and under-represented?
+- Can you run the tool on another dataset?
