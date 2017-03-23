@@ -52,17 +52,19 @@ We can apply filtering using the menu option ***Filter and Sort*** -> ***Filter 
 
 ![](images/filter3.png)
 
-You could also use this menu to filter to genes on a particular chromosome or within a certain range of start and end positions
+You could also use this menu to filter on genes on a particular chromosome or within a certain range of start and end positions
 
-## (Optional) select columns
+## Selecting columns
 
 ![](images/filter4.png)
 
-## (Optional) sorting by a column
+## Sorting by a column
 
 We can also sort the table by values in a particular column. e.g. the log$_2$ fold change.
 ![](images/filter5.png)
 
+- can also sort by multiple columns
+    + e.g. Chromosome 
 ## R workflow
 
 For those keen on R, equivalent operations can be performed with the `dplyr` package. See our [intermediate R](http://bioinformatics-core-shared-training.github.io/r-intermediate/) course for details. 
@@ -145,7 +147,7 @@ or less formally;
 
 Fortunately, we have software to calculate these quantities!
 
-## Software for conducting a over-representation test
+## Software for conducting a over-representation test (goseq)
 
 We will be using [`goseq`](https://www.bioconductor.org/packages/release/bioc/html/goseq.html), which is a software package available through [Bioconductor](www.bioconductor.org/). However, rather having to write R code, we will be using the package through our institute's Galaxy server.
 
@@ -170,9 +172,8 @@ deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 mutate(deTable, DE = padj < 0.05) %>% 
   mutate(DE = ifelse(is.na(DE),FALSE,DE)) %>% 
   select(X, DE) -> filteredTable
-filteredTable
   write.table(filteredTable,"de-table-for-goseq.txt",quote=FALSE,row.names=FALSE)
-
+filteredTable
 ```
 
 Manipulating the file can also be done in Galaxy.
@@ -234,7 +235,7 @@ Which should give something like this
 ### Extracting the columns needed for goseq
 
 ***Text Manipulation*** -> ***Cut columns from a table***
-Choose `c8,c9` as the columns to cut
+Choose `c1,c9` as the columns to cut
 
 ![](images/galaxy-8.png)
 
@@ -242,6 +243,20 @@ Which should give the following
 
 ![](images/galaxy-9.png)
 
+### Running goseq
+
+***NGS:RNA-seq** -> goseq
+
+Select Genome version *hg19* in this case. Could also specify which type of identifiers can be found in the first column. *Ensembl* ID is correct in this case.
+
+![](images/galaxy-10.png)
+
+### Exercise:
+
+The differentially-expressed genes that we identified could either by up- or down-regulated. Sometimes we might want to look for over-represented genes in the up- or down-regulated genes only
+
+- Let's suppose we want to analyse the up-regulated genes only
+- Consider what changes you would need to make to the workflow and perform the analysis
 
 ## Theory Part II: Threshold-free
 
@@ -256,6 +271,16 @@ For these tests, we don't have to specify a statistical threshold and use the te
     + Plot the score against position in gene list
     + If there is a peak at the left or right, then your set is enriched.
 
+Let's say that we have 10 genes "of interest" and can look-up their statistics from the table
+```{r echo=FALSE}
+library(limma)
+deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+stats <- deTable$stat
+statsOrder <- order(stats,decreasing = TRUE)
+myIndex <-  c(sample(statsOrder[1:500],5),sample(501:length(stats),5))
+data.frame(Gene = deTable$symbol[myIndex], Statistic = stats[myIndex])
+```
+
 
 The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. Generically, the input to GSEA is matrix of expression values / counts and a file describing which covariate each sample belongs to. However, whether or not the method can be applied directly to RNA-seq data is under debate. According to the [GSEA faq](http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/FAQ#Can_I_use_GSEA_to_analyze_SNP.2C_SAGE.2C_ChIP-Seq_or_RNA-Seq_data.3F)
 
@@ -263,9 +288,10 @@ The Broad institute provides [a version of GSEA](http://software.broadinstitute.
 
 The GSEAPreranked tool mentioned is available through the Broad insitute's [GenePattern](https://genepattern.broadinstitute.org) analysis suite. However, we don't want to introduce yet another analysis suite, so we will focus on how to perform this analysis in Galaxy.
 
+
+
 ## Preparing the gene set for a GSEA analysis
 
-The input we are trying to derive is a file with two-columns. The first column being a *gene symbol* and the second an ordered test statistic. As before, for those that are interested, the `dplyr` code to produce a table is given below:-
 
 ```{r}
 library(dplyr)
@@ -275,6 +301,7 @@ deTable %>% arrange(desc(stat)) %>%
   filter(!is.na(symbol)) -> orderedTable
 orderedTable
 ```
+
 
 ### Ranking the genes
 
@@ -296,7 +323,10 @@ Extract columns 8 (gene symbol) followed by test statistic; `c8,c5`
 
 ![](images/galaxy-12.png)
 
-## Using the fGSEA tool
+
+## Running a GSEA analysis
+
+### Using the fGSEA tool
 
 `fGSEA` is a Bioconductor package that implements the pre-ranked GSEA analysis. It also happens to be a faster implementation, as described in their [pre-print](http://biorxiv.org/content/early/2016/06/20/060012)
 
@@ -310,3 +340,11 @@ GSEA uses a set of pre-defined gene sets in their analysis which come under the 
 - C5 GO gene sets
 - C6 oncogenic signatures
 - C7 immunologic signatures
+
+![](images/galaxy-13.png)
+
+Gives all results ranked according to..
+
+- Can we identify gene sets that are significant at 0.05?
+- What genes are over- and under-represented?
+- Can you run the tool on another dataset?
