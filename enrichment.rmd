@@ -27,11 +27,15 @@ There are various tasks you might wish to perform on a gene list
 
 Our recommended tools to perform such operations would be a programming language such as R / Python so that the operations can be scripted and automated. As a compromise, our Galaxy server provides various operations through an intuitive interface and allows the user to build a workflow to a chain of simple operations.
 
+There is a special reason why you shouldn't trust Excel as your many means of interrogating the results. Sometimes it can be unhelpful and convert gene identifers into dates. [No, really!](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1044-7)
+
+We will only scratch the surface of what is possible with Galaxy. If you are new to the software, you can check out our course:- [http://galaxycam.github.io/](http://galaxycam.github.io/)
+
 Different online tools or GUIs will take different types of input, but will probably involve some combination of the operations mentioned above. Therefore, we will introduce some tools in Galaxy that should allow you to manipulate your data into the required form. Later, we will give examples of workflows for particular gene set enrichment / pathways analysis tools.
 
-In the first generic example, we will show how to filter a gene list using Galaxy:-
+In the first generic example, we will show some common manipulations on a gene list using Galaxy:-
 
-## How to apply an alternative filter to the gene list in Galaxy
+## Common tasks in Galaxy
 
 ### Upload the gene list in csv form
 
@@ -56,15 +60,22 @@ You could also use this menu to filter on genes on a particular chromosome or wi
 
 ## Selecting columns
 
+If you find the number of columns in the file a bit unwieldy, you can also use the ***Text Manipulation*** -> ***Cut columns from a table*** to remove some columns, or re-order the existing ones:-
+
 ![](images/filter4.png)
 
 ## Sorting by a column
 
-We can also sort the table by values in a particular column. e.g. the log$_2$ fold change.
+We can also sort the table by values in a particular column. e.g. the log$_2$ fold change which is found in column number 3.
 ![](images/filter5.png)
 
 - can also sort by multiple columns
-    + e.g. Chromosome 
+    + e.g. Chromosome, and then start
+
+### Creating a workflow in Galaxy
+
+An attractive feature of Galaxy is that it enables the user to chain operations together and form a workflow, which can be saved and repeated at a later date. We will exploit this shortly when performing a gene set enrichment analysis, but you can bear this in mind for your own data exploration.
+    
 ## R workflow
 
 For those keen on R, equivalent operations can be performed with the `dplyr` package. See our [intermediate R](http://bioinformatics-core-shared-training.github.io/r-intermediate/) course for details. 
@@ -79,73 +90,53 @@ reducedTable <- select(filteredTable, X,baseMean,log2FoldChange)
 
 # Gene-Ontologies and Pathways
 
-## Gene-Ontology Analysis
 
 In the early days of microarray analysis, people were happy if they got a handful of differentially-expressed genes that they could validate or follow-up. However, with later technologies (and depending on the experimental setup) we might have thousands of statistically-significant results, which no-one has the time to follow-up. Also, we might be interested in pathways / mechanisms that are altered and not just individual genes.
 
 In this section we move towards discovering if our results are ***biologically significant***. Are the genes that we have picked statistical flukes, or are there some commonalities. 
 
-There are two different approaches one might use, and we will cover the theory behind both
+There are two different approaches one might use, and we will highlight the theory behind both
 
+##  Over-representation analysis
 
-## Theory Part I: Over-representation analysis
+- "Threshold-based" methods require defintion of a statistical threshold to define list of genes to test (e.g. FDR < 0.01)
 
-- "Threshold-based": require defintion of a statistical threshold to define list of genes to test (e.g. FDR < 0.01)
-- Hypergeometric test or Fisher's Exact test generally used.
+```{r}
+suppressPackageStartupMessages(library(org.Hs.eg.db))
+result <- select(org.Hs.eg.db, keys="GO:0030291",keytype = "GO",columns="SYMBOL")
+mygenes <- result$SYMBOL
+```
+
+Let's take the set of genes `r paste(mygenes, collapse=", ")`. With the exception of one, they all look to have significant p-value. But is this evidence enough that the whole pathway has been disturbed?
+
+```{r echo=FALSE}
+dplyr:::filter(deTable, symbol %in% mygenes)
+```
 
 The question we are asking here is;
 
-> ***"Are the number of DE genes associated with Theme X significantly greater than what we might expect by chance alone?"***
+> ***"Are the number of differentially expressed (DE) genes associated with Theme X significantly greater than what we might expect by chance alone?"***
 
-Where Theme X could be genes belonging to a particular GO (Gene Onotology) term or pathway.
+We can answer this question by knowing
 
-Let's imagine that we have a bag full of balls. Each balls represents a gene in the *gene universe*. 
-- Paint the balls representing our selected list grey, and paint the rest red.
-
-
-![](images/bag-and-balls.png)
-
-In this small example, we can know in advance the total number of balls and total number in our category of interest
-
-- Total number of balls: 40
-- Total number of interesting (grey) balls: 10
-
-Now, lets select a number (say, 12) of the balls at random without seeing into the bag and look at what we get
-
-![](images/picked-balls.png)
-
-
-
-We can express a particular choice of balls as a table:-
-
-|  | In Selection | Not In Selection | Total
-------------- | ------------- |  ------------- | ------------- | 
-Grey Selected | 8 | 2 | 10 |
-Grey Not Selected  | 4 | 26 | 30 |
-Total | 12 | 6 | 40 |
-
-
+- the total number of DE genes
+- the number of genes in your gene set
+- the number of gnes in your gene set that are found to be DE
+- the total number of tested genes
 
 The formula for Fishers exact test is;
 
 $$ p = \frac{\binom{a + b}{a}\binom{c +d}{c}}{\binom{n}{a +c}} = \frac{(a+b)!(c+d)!(a+c)!(b+d)!}{a!b!c!d!n!} $$
+
 with :-
 
-|  | In Selection | Not In Selection | Total
+|  | In DE List | Not In DE List  | Total
 ------------- | ------------- |  ------------- | ------------- | 
-Grey Selected | a | b | a  +  b |
-Grey Not Selected  | c | d | c + d |
+In Gene Set | a | b | a  +  b |
+Not in Gene Set  | c | d | c + d |
 Total | a + c | b +d | a + b + c + d (=n) |
 
-
-
-
-or less formally;
-
-*P = (ways of choosing grey balls) X (ways of non-grey balls amongst subset) / ways of choosing subset*
-
-
-Fortunately, we have software to calculate these quantities!
+In this first test, our genes will be grouped together according to their Gene Ontology (*GO*) terms:- [http://www.geneontology.org/](http://www.geneontology.org/)
 
 ## Software for conducting a over-representation test (goseq)
 
@@ -157,14 +148,10 @@ This package has been *specifically-developed* for use with RNA-seq data. Plenty
 
 We can start with the list that contains results for *all* genes; Let's take `t47d_Treatment_DEA_Prog-vs-Control_all.csv`
 
-```{r}
-deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
-deTable
-```
 
-The goal is to obtain a table with two columns; the first containing the gene identifier, and the second being `TRUE` or `FALSE` indicating whether the gene is differentially-expressed at a given cut-off (e.g. `0.05`). 
+The goal is to obtain a table with two columns; the first containing the gene identifier, and the second being `TRUE` or `FALSE` indicating whether the gene is differentially-expressed at a given cut-off (e.g. `0.05`). We don't have to be too rigourous when deciding the p-value cut-off, as we're using it here as a means to filter the data not the end-point of our analysis (I've seen some people use a threshold as high as 0.1).
 
-There are several ways of doing this. If you wish to see the R code (using `dplyr`), click the 'Code' button on the right.
+If you wish to see the R code (using `dplyr`) for manipulating our data to provide an input file for the gene set analysis, click the 'Code' button on the right.
 
 ```{r message=FALSE}
 library(dplyr)
@@ -178,7 +165,7 @@ filteredTable
 
 Manipulating the file can also be done in Galaxy.
 
-## Importing the Gene list into Galaxy
+## Galaxy Workflow
 
 ### Import the csv file
 
@@ -211,14 +198,12 @@ Put *c1,c2,c3,c4,c5,c6,c7,c12* to retain columns 1,2,3,4,5,6,7 and 12
 
 ### The cleaned dataset
 
-The output from the previous step will be referred to as our *cleaned dataset*
+The output from the previous step will be referred to as our *cleaned dataset* and we will use it later on for another type of downstream analysis.
 
 ![](images/galaxy-5.png)
 
 
-## Performing a Gene Set Analysis in Galaxy
-
-From our cleaned table in the previous steps, we need to compute if each gene is DE at 0.05 significance level
+We now need to compute if each gene is DE at 0.05 significance level
 
 ### Adding an extra column
 
@@ -235,7 +220,7 @@ Which should give something like this
 ### Extracting the columns needed for goseq
 
 ***Text Manipulation*** -> ***Cut columns from a table***
-Choose `c1,c9` as the columns to cut
+Choose `c1,c9` as the columns to cut; the ensembl ID and the column created in the previous step
 
 ![](images/galaxy-8.png)
 
@@ -249,29 +234,27 @@ Which should give the following
 
 Select Genome version *hg19* in this case. Could also specify which type of identifiers can be found in the first column. *Ensembl* ID is correct in this case.
 
-![](images/galaxy-10.png)
+![](images/galaxy-goseq.png)
+
+After a while, you should notification that your analyis has completed and you can download the results by clicking the floppy disk icon.
+
+![](images/galaxy-goseq-save.png)
+
 
 ### Exercise:
+
+- Filter the output from the goseq analysis to gene sets with p-value less than 0.05
 
 The differentially-expressed genes that we identified could either by up- or down-regulated. Sometimes we might want to look for over-represented genes in the up- or down-regulated genes only
 
 - Let's suppose we want to analyse the up-regulated genes only
 - Consider what changes you would need to make to the workflow and perform the analysis
 
-## Theory Part II: Threshold-free
+## Threshold-free analysis
 
-For these tests, we don't have to specify a statistical threshold and use the test statistics from *all* genes as the input to the test. The popular *Gene Set Enrichment Analysis (GSEA)* uses this approach. These tests can be used to detect differential expression for a group of genes, even when the effects are too small or there is too little data to detect the genes individually.
+For these tests, we don't have to specify a statistical threshold and use the test statistics from *all* genes as the input to the test. The popular *Gene Set Enrichment Analysis (GSEA)* method uses this approach. These tests can be used to detect differential expression for a group of genes, even when the effects are too small or there is too little data to detect the genes individually.
 
-![*Subramanian et al, PNAS 2005*](images/GSEA.png)
-
-- Rank all your genes according to test statistic or fold-change
-- For a particular gene set of interest, look down the gene list and compute a score
-    + Go up one unit on the y-axis if the gene you encounter is contained in your gene list
-    + Go down one unit if the gene is not contained in the gene list
-    + Plot the score against position in gene list
-    + If there is a peak at the left or right, then your set is enriched.
-
-Let's say that we have 10 genes "of interest" and can look-up their statistics from the table
+Let's say that we have 10 genes "of interest". We can look-up their statistics from the table
 ```{r echo=FALSE}
 library(limma)
 deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
@@ -281,27 +264,64 @@ myIndex <-  c(sample(statsOrder[1:500],5),sample(501:length(stats),5))
 data.frame(Gene = deTable$symbol[myIndex], Statistic = stats[myIndex])
 ```
 
+Some of the statistics look high, but how do they compare to the rest of the genes? Are they towards the top of the list, or scattered randomly? This is what GSEA tries to determine. We are not making any claims about any particular gene in the list being DE, only that the set as a whole is altered.
 
-The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. Generically, the input to GSEA is matrix of expression values / counts and a file describing which covariate each sample belongs to. However, whether or not the method can be applied directly to RNA-seq data is under debate. According to the [GSEA faq](http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/FAQ#Can_I_use_GSEA_to_analyze_SNP.2C_SAGE.2C_ChIP-Seq_or_RNA-Seq_data.3F)
+We typically visualise the results of the analysis as a barcode plot. Firstly, all the test statistics are ranked from highest to lowest. We then draw a vertical line at every point where a gene in our list of interest is observed. We then determine where the *peak* of the distribution is, and consequently whether the genes are towards to top or bottom of the ranked list.
+
+Here is the plot for our set:-
+
+```{r echo=FALSE}
+barcodeplot(stats, myIndex)
+```
+
+The case where we have a down-regulated pathway might look something like:-
+
+```{r echo=FALSE}
+statsRevOrder <- order(stats,decreasing = FALSE)
+myRevIndex <-  c(sample(statsRevOrder[1:500],5),sample(501:length(stats),5))
+barcodeplot(stats, myRevIndex)
+```
+
+Or in the case of no enrichment, there is no particular pattern to where the genes occur in the ranked list
+
+```{r echo=FALSE}
+barcodeplot(stats, sample(1:length(stats),100))
+```
+
+
+The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. The input to GSEA is matrix of expression values / counts and a file describing which covariate each sample belongs to. However, whether or not the method can be applied directly to RNA-seq data is under debate. According to the [GSEA faq](http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/FAQ#Can_I_use_GSEA_to_analyze_SNP.2C_SAGE.2C_ChIP-Seq_or_RNA-Seq_data.3F)
 
 > The GSEA team has yet to determine whether any of these ranking statistics, originally selected for their effectiveness when used with expression data derived from DNA Microarray experiments, are appropriate for use with expression data derived from RNA-seq experiments. We hopefully will be able to devote some time to investigating this, but in the mean time, we are recommending use of the GSEAPreranked tool for conducting gene set enrichment analysis of data derived from RNA-seq experiments.
 
 The GSEAPreranked tool mentioned is available through the Broad insitute's [GenePattern](https://genepattern.broadinstitute.org) analysis suite. However, we don't want to introduce yet another analysis suite, so we will focus on how to perform this analysis in Galaxy.
 
+GSEA uses a set of pre-defined gene sets in their analysis which come under the following categories:-
 
+- H hallmark gene sets
+- C1 positional gene sets
+- C2 curated gene sets
+- C3 motif gene sets
+- C4 computational gene sets
+- C5 GO gene sets
+- C6 oncogenic signatures
+- C7 immunologic signatures
+
+You can find out more about these gene sets on the [msigdb](http://software.broadinstitute.org/gsea/msigdb) website. However, it is important that these gene sets have **Human gene symbols** only.
 
 ## Preparing the gene set for a GSEA analysis
 
+For those interested, here is the R code to produce a file suitable for GSEA analysis:-
 
 ```{r}
 library(dplyr)
-deTable <- read.csv("deseq2_results/t47d_Treatment_DEA_Prog-vs-Control_all.csv")
+deTable <- read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv")
 deTable %>% arrange(desc(stat)) %>% 
   dplyr:::select(symbol, stat) %>% 
   filter(!is.na(symbol)) -> orderedTable
 orderedTable
 ```
 
+Now lets walkthrough how to do that in Galaxy:-
 
 ### Ranking the genes
 
@@ -314,6 +334,8 @@ From the *cleaned* table created above, sort on column 5 (the test statistic)
 Giving the output:-
 
 ![](images/galaxy-11.png)
+
+We now have all the information we need, but the GSEA tool expects only two columns; gene symbol and ranked statistic
 
 ### Cutting the columns
 
@@ -330,21 +352,17 @@ Extract columns 8 (gene symbol) followed by test statistic; `c8,c5`
 
 `fGSEA` is a Bioconductor package that implements the pre-ranked GSEA analysis. It also happens to be a faster implementation, as described in their [pre-print](http://biorxiv.org/content/early/2016/06/20/060012)
 
-GSEA uses a set of pre-defined gene sets in their analysis which come under the following categories:-
-
-- H hallmark gene sets
-- C1 positional gene sets
-- C2 curated gene sets
-- C3 motif gene sets
-- C4 computational gene sets
-- C5 GO gene sets
-- C6 oncogenic signatures
-- C7 immunologic signatures
+You can find the tool under NGS: RNA-seq Analysis
 
 ![](images/galaxy-13.png)
 
-Gives all results ranked according to..
+With this tool, three different output are produced
 
-- Can we identify gene sets that are significant at 0.05?
-- What genes are over- and under-represented?
-- Can you run the tool on another dataset?
+- a results table
+- a summary graphic of the top pathways
+- enrichment plots for the top pathways
+
+## Exercise
+
+- Can you identify pathways that are significant at 0.05 level?
+- What pathways are over- and under-represented?
