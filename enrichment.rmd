@@ -257,8 +257,15 @@ For these tests, we don't have to specify a statistical threshold and use the te
     + If there is a peak at the left or right, then your set is enriched.
 
 
-The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. 
-The required input text contains a set of gene identifiers that are ordered according to some test statistic.
+The Broad institute provides [a version of GSEA](http://software.broadinstitute.org/gsea/index.jsp) that can be run via a java application. Generically, the input to GSEA is matrix of expression values / counts and a file describing which covariate each sample belongs to. However, whether or not the method can be applied directly to RNA-seq data is under debate. According to the [GSEA faq](http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/FAQ#Can_I_use_GSEA_to_analyze_SNP.2C_SAGE.2C_ChIP-Seq_or_RNA-Seq_data.3F)
+
+> The GSEA team has yet to determine whether any of these ranking statistics, originally selected for their effectiveness when used with expression data derived from DNA Microarray experiments, are appropriate for use with expression data derived from RNA-seq experiments. We hopefully will be able to devote some time to investigating this, but in the mean time, we are recommending use of the GSEAPreranked tool for conducting gene set enrichment analysis of data derived from RNA-seq experiments.
+
+The GSEAPreranked tool mentioned is available through the Broad insitute's [GenePattern](https://genepattern.broadinstitute.org) analysis suite. However, we don't want to introduce yet another analysis suite, so we will focus on how to perform this analysis in Galaxy.
+
+## Preparing the gene set for a GSEA analysis
+
+The input we are trying to derive is a file with two-columns. The first column being a *gene symbol* and the second an ordered test statistic. As before, for those that are interested, the `dplyr` code to produce a table is given below:-
 
 ```{r}
 library(dplyr)
@@ -268,10 +275,6 @@ deTable %>% arrange(desc(stat)) %>%
   filter(!is.na(symbol)) -> orderedTable
 orderedTable
 ```
-
-
-
-## Preparing the gene set for a GSEA analysis
 
 ### Ranking the genes
 
@@ -293,8 +296,17 @@ Extract columns 8 (gene symbol) followed by test statistic; `c8,c5`
 
 ![](images/galaxy-12.png)
 
-### Remove rows without a gene symbol
+## Using the fGSEA tool
 
+`fGSEA` is a Bioconductor package that implements the pre-ranked GSEA analysis. It also happens to be a faster implementation, as described in their [pre-print](http://biorxiv.org/content/early/2016/06/20/060012)
 
+GSEA uses a set of pre-defined gene sets in their analysis which come under the following categories:-
 
-## Using the GSEAPreranked
+- H hallmark gene sets
+- C1 positional gene sets
+- C2 curated gene sets
+- C3 motif gene sets
+- C4 computational gene sets
+- C5 GO gene sets
+- C6 oncogenic signatures
+- C7 immunologic signatures
