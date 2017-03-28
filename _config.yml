@@ -1,0 +1,8 @@
+title: Making the most of mRNA sequencing experiments at CRUK-C.I.
+description:
+google_analytics:
+show_downloads: true
+theme: jekyll-theme-slate
+
+gems:
+  - jekyll-mentions
