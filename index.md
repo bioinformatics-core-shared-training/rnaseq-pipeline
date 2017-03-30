@@ -22,7 +22,7 @@ This will be the first in a series of courses aimed at explaining the computatio
 
 ## Related Courses
 
-- [Experimental Design)[http://bioinformatics-core-shared-training.github.io/experimental-design/
+- [Experimental Design)](http://bioinformatics-core-shared-training.github.io/experimental-design/)
 - [Galaxy Introduction](http://galaxycam.github.io/)
 - [RNA-seq analysis in R](http://combine-australia.github.io/2016-05-11-RNAseq/)
 
