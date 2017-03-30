@@ -405,3 +405,23 @@ Select Ensembl IDs, log2FoldChange and adjusted p-value (columns 1, 3 and 7).
 
 ![](images/galaxy-to-metacore.png)
 
+Or, in R:-
+
+```{r}
+read.csv("t47d_Treatment_DEA_Prog-vs-Control_all.csv") %>% #head
+  dplyr:::select(X,log2FoldChange, padj) %>% 
+    write.table("t47d_Treatment_DEA_Prog-vs-Control_all_forMetacore.txt",sep="\t",quote=FALSE,row.names=FALSE)
+```
+
+
+You are then ready to load the data into Metacore:-
+
+![](images/metacore-home.png)
+
+***Upload*** -> ***Upload Experiments with Gene or Protein IDs***
+
+
+Specify types of data in each column
+
+![](images/metacore-columns.png)
+
