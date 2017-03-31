@@ -334,13 +334,13 @@ GSEA uses a set of pre-defined gene sets in their analysis which come under the 
 
 You can find out more about these gene sets on the [msigdb](http://software.broadinstitute.org/gsea/msigdb) website. However, it is important to note that these gene sets have **Human gene symbols** only.
 
-e.g. C6 oncogenic signatures which was used in the GSEA analysis of this dataset
+e.g. C6 oncogenic signatures, which were used in the original GSEA analysis of this dataset
 
 > Gene sets represent signatures of cellular pathways which are often dis-regulated in cancer. The majority of signatures were generated directly from microarray data from NCBI GEO or from internal unpublished profiling experiments which involved perturbation of known cancer genes. In addition, a small number of oncogenic signatures were curated from scientific publications.
 
 ## Preparing the gene set for a GSEA analysis
 
-In order to perform the GSEAPreRaked analysis, one needs to create file with two columns; the first containing the gene symbol, and the second is the (ranked) statistic for the gene. For those interested, here is the R code to produce a file suitable for GSEA analysis:-
+In order to perform the GSEAPreRanked analysis, one needs to create file with two columns; the first containing the gene symbol, and the second is the (ranked) statistic for the gene. For those interested, here is the R code to produce a file suitable for GSEA analysis:-
 
 ```{r}
 library(dplyr)
