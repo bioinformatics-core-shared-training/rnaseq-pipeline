@@ -13,7 +13,6 @@ This will be the first in a series of courses aimed at explaining the computatio
 
 - [Experimental setup, design considerations for RNA-seq]()
 - [Pipeline walkthrough]()
-- [Using Browsers]()
 - [Downstream Analysis](enrichment.nb.html)
 
 ## Data
