@@ -8,6 +8,8 @@ output:
     toc_float: yes
   html_document:
     toc: yes
+  pdf_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE,echo=FALSE}
@@ -92,8 +94,12 @@ We might want to consider the top 100, 200, genes in our list ranked according t
 
 The appeal of Galaxy is that these operations can be performed in succession, with each new operation using the output from the previous step. As you get more-advanced, your workflow can be saved, shared and re-used on other datasets. See Anne for more details or attend our [Galaxy course](http://galaxycam.github.io/)
 
-e.g. Import -> Filter by fold-change -> select columns -> Top 100
+e.g. Import -> Convert -> Filter by fold-change -> Top 100
  
+***Shared Data*** ->  ***Workflows***
+
+![](images/galaxy-workflow.png)
+
 ## R workflow
 
 For those keen on R, equivalent operations can be performed with the `dplyr` package. See our [intermediate R](http://bioinformatics-core-shared-training.github.io/r-intermediate/) course for details. 
@@ -221,7 +227,7 @@ The output from the previous step will be referred to as our *cleaned dataset* a
 ![](images/galaxy-5.png)
 
 
-We now need to compute if each gene is DE at 0.05 significance level
+We now need to determine if each gene is DE at 0.05 significance level
 
 ### Adding an extra column
 
@@ -345,7 +351,7 @@ Now lets walkthrough how to do that in Galaxy:-
 
 ### Ranking the genes
 
-From the *cleaned* table created above, sort on column 5 (the test statistic)
+Make sure your ***cleaned dataset*** is selected (converted to tabular, removed header and cut columns), sort on column 5 (the test statistic)
 
 ***Filter and Sort*** -> ***Sort data in ascending or descending order***
 
